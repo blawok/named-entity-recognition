@@ -1,2 +1,6 @@
 # Named_Entity_Recognition
-Experiments using different algorithms for NER
+
+Developing two models for NER problem:
+* Bidirectional LSTM with Conditional Random Field (CRF) layer
+* DistilBERT (fine-tuning)
+
