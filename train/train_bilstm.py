@@ -57,8 +57,7 @@ if __name__ == '__main__':
     ])
     
     model.compile(optimizer="adam",
-                  loss="sparse_categorical_crossentropy",
-                  metrics=['accuracy'])
+                  loss="sparse_categorical_crossentropy")
     
     model.fit(train_sample_X, 
               train_sample_y.reshape(*train_sample_y.shape, 1),
@@ -73,8 +72,17 @@ if __name__ == '__main__':
 #     tf.saved_model.save(model,
 #                         os.path.join(model_dir, '1/'))
     
-#     tf.saved_model.simple_save(
-#             tf.keras.backend.get_session(),
-#             os.path.join(model_dir, '1'),
-#             inputs={'inputs': model.input},
-#             outputs={t.name: t for t in model.outputs})
+#     version = 1
+#     export_path = os.path.join(model_dir, str(version))
+#     print('export_path = {}\n'.format(export_path))
+
+#     tf.keras.models.save_model(
+#         model,
+#         export_path,
+#         overwrite=True
+# #         include_optimizer=True,
+# #         save_format=None,
+# #         signatures=None,
+# #         options=None
+#     )
+
