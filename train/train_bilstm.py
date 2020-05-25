@@ -4,10 +4,8 @@ import pandas as pd
 import json
 
 import tensorflow as tf
-import keras
-from keras import backend as K
-from keras.models import Sequential
-from keras.layers import LSTM, Embedding, Dense, TimeDistributed, SpatialDropout1D, Bidirectional
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Embedding, Dense, TimeDistributed, SpatialDropout1D, Bidirectional
 
 
 if __name__ == '__main__':
@@ -52,7 +50,7 @@ if __name__ == '__main__':
         Embedding(input_dim=n_words, output_dim=50, input_length=max_len),
         SpatialDropout1D(0.1),
 
-        Bidirectional(LSTM(units=100, return_sequences=True, recurrent_dropout=0.1)),
+        Bidirectional(LSTM(units=100, return_sequences=True)),
         TimeDistributed(Dense(n_tags, activation="softmax"))
     ])
     
@@ -64,25 +62,8 @@ if __name__ == '__main__':
               batch_size=batch_size,
               epochs=epochs,
               validation_split=0.1,
-              verbose=1)
+              verbose=2)
     
-#     if args.current_host == args.hosts[0]:
-#         model.save(os.path.join(model_dir, '000000001'), 'bilstm.h5')
-        
-#     tf.saved_model.save(model,
-#                         os.path.join(model_dir, '1/'))
-    
-#     version = 1
-#     export_path = os.path.join(model_dir, str(version))
-#     print('export_path = {}\n'.format(export_path))
+    model.save(os.path.join(model_dir,'bi_lstm/1'), save_format='tf')
 
-#     tf.keras.models.save_model(
-#         model,
-#         export_path,
-#         overwrite=True
-# #         include_optimizer=True,
-# #         save_format=None,
-# #         signatures=None,
-# #         options=None
-#     )
 
