@@ -3,9 +3,30 @@ import numpy as np
 import pandas as pd
 import json
 
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Embedding, Dense, TimeDistributed, SpatialDropout1D, Bidirectional
+from tensorflow.keras import Model
+from tensorflow.keras.layers import (
+    Embedding,
+    SpatialDropout1D,
+    Bidirectional,
+    LSTM,
+    TimeDistributed,
+    Dense
+)
+
+class BiLSTM(Model):
+
+    def __init__(self):
+        super(BiLSTM, self).__init__()
+        self.embedding = Embedding(input_dim=N_WORDS, output_dim=50, input_length=MAX_LEN)
+        self.spatial_dropout = SpatialDropout1D(0.1)
+        self.bilstm = Bidirectional(LSTM(units=100, return_sequences=True))
+        self.tddense = TimeDistributed(Dense(N_TAGS, activation="softmax"))
+
+    def call(self, inputs):
+        x = self.embedding(inputs)
+        x = self.spatial_dropout(x)
+        x = self.bilstm(x)
+        return self.tddense(x)
 
 
 if __name__ == '__main__':
@@ -19,6 +40,7 @@ if __name__ == '__main__':
     parser.add_argument('--n-tags', type=int, default=17)
     parser.add_argument('--n-words', type=int, default=35178)   
     
+    parser.add_argument('--model-version', type=str, default='1')
     parser.add_argument('--model-dir', type=str, default=os.environ['SM_MODEL_DIR'])
     parser.add_argument('--training', type=str, default=os.environ['SM_CHANNEL_TRAINING'])
     parser.add_argument('--hosts', type=list, default=json.loads(os.environ.get('SM_HOSTS')))
@@ -26,44 +48,41 @@ if __name__ == '__main__':
     
     args, _ = parser.parse_known_args()
     
-    max_len    = args.max_len
-    n_tags     = args.n_tags
-    n_words    = args.n_words
-    epochs     = args.epochs
-    batch_size = args.batch_size
-    model_dir  = args.model_dir
-    training_dir   = args.training
+    MAX_LEN    = args.max_len
+    N_TAGS     = args.n_tags
+    N_WORDS    = args.n_words
+    EPOCHS     = args.epochs
+    BATCH_SIZE = args.batch_size
+    MODEL_VER  = args.model_version
+    MODEL_DIR  = args.model_dir
+    TRAINING_DIR  = args.training
     
     # ----- LOAD DATA -----
-    train_sample = pd.read_csv(os.path.join(training_dir, 'train.csv'),
-                               header=None,
-                               names=None,
-                               nrows=1024
-                              )
+    print(TRAINING_DIR)
+    train = pd.read_csv(os.path.join(TRAINING_DIR, 'bilstm_train.csv'),
+                        header=None,
+                        names=None
+                       )
 
-    train_sample_y = train_sample.iloc[:,:-50].values
-    train_sample_X = train_sample.iloc[:,50:].values
+    train_y = train.iloc[:,:-50].values
+    train_X = train.iloc[:,50:].values
     
     # ----- DECLARE MODEL -----
-    model = Sequential([
-
-        Embedding(input_dim=n_words, output_dim=50, input_length=max_len),
-        SpatialDropout1D(0.1),
-
-        Bidirectional(LSTM(units=100, return_sequences=True)),
-        TimeDistributed(Dense(n_tags, activation="softmax"))
-    ])
+    model = BiLSTM()
     
     model.compile(optimizer="adam",
                   loss="sparse_categorical_crossentropy")
     
-    model.fit(train_sample_X, 
-              train_sample_y.reshape(*train_sample_y.shape, 1),
-              batch_size=batch_size,
-              epochs=epochs,
+    # ----- FIT MODEL -----
+    model.fit(train_X, 
+              train_y.reshape(*train_y.shape, 1),
+              batch_size=BATCH_SIZE,
+              epochs=EPOCHS,
               validation_split=0.1,
               verbose=2)
     
-    model.save(os.path.join(model_dir,'bi_lstm/1'), save_format='tf')
+    # ----- SAVE MODEL -----
+    model.save(os.path.join(MODEL_DIR,'bi_lstm',MODEL_VER),
+               save_format='tf')
 
 
