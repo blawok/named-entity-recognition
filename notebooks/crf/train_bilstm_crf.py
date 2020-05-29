@@ -14,16 +14,15 @@ from tensorflow.keras.layers import (
     TimeDistributed,
     Dense
 )
-from tensorflow.keras.callbacks import EarlyStopping, Callback
 
 
 class BiLSTM(Model):
 
     def __init__(self):
         super(BiLSTM, self).__init__()
-        self.embedding = Embedding(input_dim=N_WORDS, output_dim=EMBED_DIM, input_length=MAX_LEN)
+        self.embedding = Embedding(input_dim=N_WORDS, output_dim=100, input_length=MAX_LEN)
         self.spatial_dropout = SpatialDropout1D(0.1)
-        self.bilstm = Bidirectional(LSTM(units=HIDDEN_UNITS, return_sequences=True))
+        self.bilstm = Bidirectional(LSTM(units=256, return_sequences=True))
         self.tddense = TimeDistributed(Dense(N_TAGS, activation="softmax"))
 
     def call(self, inputs):
@@ -32,23 +31,18 @@ class BiLSTM(Model):
         x = self.bilstm(x)
         return self.tddense(x)
 
+def install(package):
+    subprocess.call([sys.executable, "-m", "pip", "install", package])
     
-class LossCallback(Callback):
-    
-    def on_epoch_end(self, epoch, logs={}):
-        if(logs.get('val_loss') < 0.03 or logs.get('loss') < 0.02):
-            print("\nReached target loss so cancelling training!")
-            self.model.stop_training = True
-            
-            
 if __name__ == '__main__':
+    
+#     install('tensorflow-addons==0.10.0')
+#     from crf import CRF
 
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--epochs', type=int, default=5)
     parser.add_argument('--batch-size', type=int, default=32)
-    parser.add_argument('--embed-dim', type=int, default=50)
-    parser.add_argument('--hidden-units', type=int, default=128)
     
     parser.add_argument('--max-len', type=int, default=50)
     parser.add_argument('--n-tags', type=int, default=17)
@@ -65,12 +59,8 @@ if __name__ == '__main__':
     MAX_LEN    = args.max_len
     N_TAGS     = args.n_tags
     N_WORDS    = args.n_words
-    
     EPOCHS     = args.epochs
     BATCH_SIZE = args.batch_size
-    EMBED_DIM = args.embed_dim
-    HIDDEN_UNITS = args.hidden_units
-    
     MODEL_VER  = args.model_version
     MODEL_DIR  = args.model_dir
     TRAINING_DIR  = args.training
@@ -86,23 +76,27 @@ if __name__ == '__main__':
     train_X = train.iloc[:,50:].values
     
     # ----- DECLARE MODEL -----
-    model = BiLSTM()
+#     model = Sequential()
+#     model.add(Embedding(input_dim=N_WORDS+1, output_dim=50, input_length=MAX_LEN, mask_zero=True))
+#     model.add(SpatialDropout1D(0.1))
+#     model.add(Bidirectional(LSTM(units=50, return_sequences=True)))
+#     model.add(Dense(N_TAGS))
+#     crf = CRF(N_TAGS, sparse_target=True)
+#     model.add(crf)
+#     model.compile('adam', loss=crf.loss, metrics=[crf.accuracy])
     
+    model = BiLSTM()
     model.compile(optimizer="adam",
-                  loss="sparse_categorical_crossentropy")
+                      loss="sparse_categorical_crossentropy")
     
     # ----- FIT MODEL -----
-    es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience = 3)
-    callbacks = LossCallback()
-    
     model.fit(train_X, 
+#               np.array(train_y),
               train_y.reshape(*train_y.shape, 1),
               batch_size=BATCH_SIZE,
               epochs=EPOCHS,
               validation_split=0.1,
-              verbose=2,
-              callbacks=[callbacks, es]
-             )
+              verbose=2)
     
     # ----- SAVE MODEL -----
     model.save(os.path.join(MODEL_DIR,'bi_lstm',MODEL_VER),
