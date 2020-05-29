@@ -36,7 +36,7 @@ def install(package):
     
 if __name__ == '__main__':
     
-#     install('tensorflow-addons==0.9.1')
+#     install('tensorflow-addons==0.10.0')
 #     from crf import CRF
 
     parser = argparse.ArgumentParser()
