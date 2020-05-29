@@ -2,8 +2,10 @@ import argparse, os
 import numpy as np
 import pandas as pd
 import json
+import subprocess
+import sys
 
-from tensorflow.keras import Model
+from tensorflow.keras import Model, Sequential
 from tensorflow.keras.layers import (
     Embedding,
     SpatialDropout1D,
@@ -13,13 +15,14 @@ from tensorflow.keras.layers import (
     Dense
 )
 
+
 class BiLSTM(Model):
 
     def __init__(self):
         super(BiLSTM, self).__init__()
-        self.embedding = Embedding(input_dim=N_WORDS, output_dim=50, input_length=MAX_LEN)
+        self.embedding = Embedding(input_dim=N_WORDS, output_dim=100, input_length=MAX_LEN)
         self.spatial_dropout = SpatialDropout1D(0.1)
-        self.bilstm = Bidirectional(LSTM(units=100, return_sequences=True))
+        self.bilstm = Bidirectional(LSTM(units=256, return_sequences=True))
         self.tddense = TimeDistributed(Dense(N_TAGS, activation="softmax"))
 
     def call(self, inputs):
@@ -28,9 +31,14 @@ class BiLSTM(Model):
         x = self.bilstm(x)
         return self.tddense(x)
 
-
+def install(package):
+    subprocess.call([sys.executable, "-m", "pip", "install", package])
+    
 if __name__ == '__main__':
-        
+    
+#     install('tensorflow-addons==0.9.1')
+#     from crf import CRF
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--epochs', type=int, default=5)
@@ -68,13 +76,22 @@ if __name__ == '__main__':
     train_X = train.iloc[:,50:].values
     
     # ----- DECLARE MODEL -----
-    model = BiLSTM()
+#     model = Sequential()
+#     model.add(Embedding(input_dim=N_WORDS+1, output_dim=50, input_length=MAX_LEN, mask_zero=True))
+#     model.add(SpatialDropout1D(0.1))
+#     model.add(Bidirectional(LSTM(units=50, return_sequences=True)))
+#     model.add(Dense(N_TAGS))
+#     crf = CRF(N_TAGS, sparse_target=True)
+#     model.add(crf)
+#     model.compile('adam', loss=crf.loss, metrics=[crf.accuracy])
     
+    model = BiLSTM()
     model.compile(optimizer="adam",
-                  loss="sparse_categorical_crossentropy")
+                      loss="sparse_categorical_crossentropy")
     
     # ----- FIT MODEL -----
     model.fit(train_X, 
+#               np.array(train_y),
               train_y.reshape(*train_y.shape, 1),
               batch_size=BATCH_SIZE,
               epochs=EPOCHS,
