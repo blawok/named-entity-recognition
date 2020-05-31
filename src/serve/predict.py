@@ -11,105 +11,76 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.utils.data
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
-from transformers import RobertaForTokenClassification
+from transformers import RobertaForTokenClassification,RobertaTokenizer,RobertaConfig
+from scipy.special import softmax
+from tensorflow.keras.preprocessing.sequence import pad_sequences
 
 def model_fn(model_dir):
     print("Loading model.")
     
+    from transformers import RobertaForTokenClassification
+    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model = RobertaForTokenClassification.from_pretrained(model_dir,
+    model = RobertaForTokenClassification.from_pretrained('roberta-base',
                                                           num_labels=20)
-    
-    model.to(device).eval()
+        
+    with open(os.path.join(model_dir, 'model.pth'), 'rb') as f:
+        model.load_state_dict(torch.load(f))
+            
+    return model.to(device)
 
-    print("Done loading model.")
-    return model
+def input_fn(serialized_input_data, content_type):
+    print('Deserializing the input data.')
+    if content_type == 'text/plain':
+        data = serialized_input_data.decode('utf-8')
+        return data
+    raise Exception('Requested unsupported ContentType in content_type: ' + content_type)
 
+def output_fn(prediction_output, accept):
+    print('Serializing the generated output.')
+    return str(prediction_output)
 
 def predict_fn(input_data, model):
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print('Making predictions.')
     
-    val_tags = input_data[input_data.columns[0:45]].values
-    val_inputs = input_data[input_data.columns[45:90]].values
-    val_masks = input_data[input_data.columns[90:135]].values
-    val_segs = input_data[input_data.columns[135:]].values
-
-    val_inputs = torch.tensor(val_inputs)
-    val_tags = torch.tensor(val_tags)
-    val_masks = torch.tensor(val_masks)
-    val_segs = torch.tensor(val_segs)
-
-    valid_data = TensorDataset(val_inputs, val_masks, val_tags)
-    valid_sampler = SequentialSampler(valid_data)
-    valid_dataloader = DataLoader(valid_data, sampler=valid_sampler, batch_size=32)
+    # ----- PREPROCESSING -----
+    tokenizer=RobertaTokenizer.from_pretrained('roberta-base',do_lower_case=False)
+    max_len  = 45
     
-    tag2name = {14: 'B-art',
-                16: 'B-eve',
-                0: 'B-geo',
-                13: 'B-gpe',
-                12: 'B-nat',
-                10: 'B-org',
-                4: 'B-per',
-                2: 'B-tim',
-                5: 'I-art',
-                7: 'I-eve',
-                15: 'I-geo',
-                8: 'I-gpe',
-                11: 'I-nat',
-                3: 'I-org',
-                6: 'I-per',
-                1: 'I-tim',
-                17: 'X',
-                9: 'O',
-                18: '[CLS]',
-                19: '[SEP]'}   
+    tokenized_texts = []
+    temp_token = []
+    temp_token.append('[CLS]')
+    token_list = tokenizer.tokenize(input_data)
     
-    # ---- START EVALUATION ----
+    for m,token in enumerate(token_list):
+        temp_token.append(token)
+    if len(temp_token) > max_len-1:
+        temp_token= temp_token[:max_len-1]
+        
+    temp_token.append('[SEP]')
+    tokenized_texts.append(temp_token)
+    
+    input_ids = pad_sequences([tokenizer.convert_tokens_to_ids(txt) for txt in tokenized_texts],
+                          maxlen=max_len, dtype="long", truncating="post", padding="post")
+    
+    attention_masks = [[int(i>0) for i in ii] for ii in input_ids]
+    segment_ids = [[0] * len(input_id) for input_id in input_ids]
+    
+    input_ids = torch.tensor(input_ids)
+    attention_masks = torch.tensor(attention_masks)
+    segment_ids = torch.tensor(segment_ids)
+    
+    # ----- MAKING PREDICTIONS -----
     model.eval()
+
+    with torch.no_grad():
+        outputs = model(input_ids, token_type_ids=None,attention_mask=None,)
+        logits = outputs[0]    
     
-    eval_loss, eval_accuracy = 0, 0
-    nb_eval_steps, nb_eval_examples = 0, 0
-    y_true = []
-    y_pred = []
-
-    print("***** Running evaluation *****")
-    print("  Num examples ={}".format(len(val_inputs)))
-    print("  Batch size = {}".format(batch_num))
+    predict_results = logits.detach().cpu().numpy()
+    result_arrays_soft = softmax(predict_results[0])
     
-    for step, batch in enumerate(valid_dataloader):
-        batch = tuple(t.to(device) for t in batch)
-        input_ids, input_mask, label_ids = batch
-
-        with torch.no_grad():
-            outputs = predictor(input_ids, token_type_ids=None, attention_mask=input_mask,)
-            logits = outputs[0] 
-
-        # Get NER predict result
-        logits = torch.argmax(F.log_softmax(logits,dim=2),dim=2)
-        logits = logits.detach().cpu().numpy()
-
-        # Get NER true result
-        label_ids = label_ids.to('cpu').numpy()
-
-        # Only predict the real word, mark=0, will not calculate
-        input_mask = input_mask.to('cpu').numpy()
-
-        # Compare the valuable predict result
-        for i,mask in enumerate(input_mask):
-            temp_1 = []
-            temp_2 = []
-
-            for j, m in enumerate(mask):
-                if m:
-                    if tag2name[label_ids[i][j]] != "X" and tag2name[label_ids[i][j]] != "[CLS]" and tag2name[label_ids[i][j]] != "[SEP]" : # Exclude the X label
-                        temp_1.append(tag2name[label_ids[i][j]])
-                        temp_2.append(tag2name[logits[i][j]])
-                else:
-                    break
-
-            y_true.append(temp_1)
-            y_pred.append(temp_2)
-            
-    return [y_true, y_pred]
+    result_list = np.argmax(result_array,axis=-1)
+    
+    return result_list
