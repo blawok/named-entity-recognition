@@ -10,10 +10,13 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.utils.data
+import re
+
+from bs4 import BeautifulSoup
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 from transformers import RobertaForTokenClassification,RobertaTokenizer,RobertaConfig
 from scipy.special import softmax
-from tensorflow.keras.preprocessing.sequence import pad_sequences
+
 
 def model_fn(model_dir):
     print("Loading model.")
@@ -44,6 +47,11 @@ def output_fn(prediction_output, accept):
 def predict_fn(input_data, model):
     print('Making predictions.')
     
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
+    text = BeautifulSoup(input_data, "html.parser").get_text()
+    text = re.sub(r"[^a-zA-Z0-9]", " ", text)
+    
     # ----- PREPROCESSING -----
     tokenizer=RobertaTokenizer.from_pretrained('roberta-base',do_lower_case=False)
     max_len  = 45
@@ -51,7 +59,7 @@ def predict_fn(input_data, model):
     tokenized_texts = []
     temp_token = []
     temp_token.append('[CLS]')
-    token_list = tokenizer.tokenize(input_data)
+    token_list = tokenizer.tokenize(text)
     
     for m,token in enumerate(token_list):
         temp_token.append(token)
@@ -61,13 +69,17 @@ def predict_fn(input_data, model):
     temp_token.append('[SEP]')
     tokenized_texts.append(temp_token)
     
-    input_ids = pad_sequences([tokenizer.convert_tokens_to_ids(txt) for txt in tokenized_texts],
-                          maxlen=max_len, dtype="long", truncating="post", padding="post")
+    input_zeros = np.zeros((1,max_len)).astype(int)
+    input_seq = [tokenizer.convert_tokens_to_ids(txt) for txt in tokenized_texts] 
+    input_seq = np.array(input_seq)
+    input_zeros[:input_seq.shape[0],:input_seq.shape[1]] = input_seq
+    
+    input_ids = input_zeros
     
     attention_masks = [[int(i>0) for i in ii] for ii in input_ids]
     segment_ids = [[0] * len(input_id) for input_id in input_ids]
     
-    input_ids = torch.tensor(input_ids)
+    input_ids = torch.tensor(input_zeros)
     attention_masks = torch.tensor(attention_masks)
     segment_ids = torch.tensor(segment_ids)
     
@@ -81,6 +93,8 @@ def predict_fn(input_data, model):
     predict_results = logits.detach().cpu().numpy()
     result_arrays_soft = softmax(predict_results[0])
     
-    result_list = np.argmax(result_array,axis=-1)
+    result_list = np.argmax(result_arrays_soft,axis=-1)
     
-    return result_list
+    print(result_list)
+    
+    return result_list.tolist()

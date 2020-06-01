@@ -2,3 +2,5 @@ transformers
 numpy
 pandas
 scipy
+beautifulsoup4
+html5lib
