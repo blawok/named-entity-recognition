@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="{CHARSET}">
+  <title>NER</title>
+  <div class="jumbotron" align="Center">
+      <h1>Named Entity Recognition</h1>
+      <p>Using RoBERTa</p>
+    </div>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+</head>
+
+<body>
+    <div class="row">
+        <div class="col-lg-4"></div>
+        <div class="col-lg-4">
+        <h2> Type your sentence: </h2>
+
+    <form method="POST">
+        {{ form.csrf_token }}
+        {{ form.sentence_for_ner(class="form-control", rows="5") }}
+        <br>
+        <input type="submit" value="Go" class="btn btn-danger">
+    </form>
+  </div>
+  </div>
+
+</body>
+
+</html>

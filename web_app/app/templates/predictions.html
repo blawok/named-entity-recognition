@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>NER</title>
+  <div class="jumbotron" align="Center">
+        <h1>Named Entity Recognition</h1>
+        <p>Using RoBERTa</p>
+      </div>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+</head>
+
+<body>
+    <div class="row">
+        <div class="col-lg-4"></div>
+        <div class="col-lg-4">
+
+        <h2> Predictions </h2>
+
+        <h3>Input sentence: {{sentence_for_ner}}</h3>
+
+        <div class='table-responsive'>
+                {{ df_preds | safe }}
+            </div>
+
+        <br>
+        <a href="/"><i class="fa fa-fw fa-bolt"></i>Input another sentence</a>
+    </div>
+</div>
+</body>
+
+</html>

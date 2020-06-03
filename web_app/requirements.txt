@@ -1,0 +1,9 @@
+click
+dominate
+Flask
+Flask-Bootstrap
+itsdangerous
+Jinja2
+MarkupSafe
+visitor
+Werkzeug==0.16.1
