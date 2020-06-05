@@ -1,0 +1,1 @@
+{"train_data_directory": "s3://sagemaker-eu-west-1-087816224558/named_entity_recognition/roberta_data/test_roberta.csv", "test_data_directory": "s3://sagemaker-eu-west-1-087816224558/named_entity_recognition/roberta_data/test_roberta.csv"}
