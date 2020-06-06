@@ -10,8 +10,11 @@ import torch
 import torch.optim as optim
 import torch.nn.functional as F
 import torch.utils.data
-from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
-from utils import _get_data_loader, install, _get_tag2name
+from torch.utils.data import (TensorDataset,
+                              DataLoader,
+                              RandomSampler,
+                              SequentialSampler)
+from utils import install, _get_tag2name, _get_data_loader
 
 
 def model_fn(model_dir):
@@ -33,6 +36,7 @@ def model_fn(model_dir):
             
     return model.to(device)
 
+
 def train(model, train_loader, epochs, optimizer, device):
     """
     Training method that is called by the PyTorch training script.
@@ -41,101 +45,101 @@ def train(model, train_loader, epochs, optimizer, device):
     train_loader - The PyTorch DataLoader that should be used during training.
     epochs       - The total number of epochs to train for.
     optimizer    - The optimizer to use during training.
-    loss_fn      - The loss function used for training.
     device       - Where the model and data should be loaded (gpu or cpu).
     """
-    print('Starting training')
+    print('--------------------')
+    print('--------------------')
+    print('Starting training.')
     
     for _ in trange(epochs, desc="Epoch"):
-        
         model.train()
-        tr_loss = 0
-        nb_tr_examples, nb_tr_steps = 0, 0
+        training_loss = 0
+        training_steps = 0
         
         for step, batch in enumerate(train_loader):
-            # add batch to gpu
             batch = tuple(t.to(device) for t in batch)
-            b_input_ids, b_input_mask, b_labels = batch
+            batch_input_ids, batch_input_mask, batch_labels = batch
 
             # forward pass
-            outputs = model(b_input_ids, token_type_ids=None,
-            attention_mask=b_input_mask, labels=b_labels)
+            outputs = model(batch_input_ids,
+                            token_type_ids=None,
+                            attention_mask=batch_input_mask,
+                            labels=batch_labels
+                           )
             loss, scores = outputs[:2]
 
             # backward pass
             loss.backward()
 
-            # track train loss
-            tr_loss += loss.item()
-            nb_tr_examples += b_input_ids.size(0)
-            nb_tr_steps += 1
+            # cummulate training loss
+            training_loss += loss.item()
+            training_steps += 1
 
             # gradient clipping
-            torch.nn.utils.clip_grad_norm_(parameters=model.parameters(), max_norm=1.0)
+            torch.nn.utils.clip_grad_norm_(parameters=model.parameters(),
+                                           max_norm=1.0)
 
             # update parameters
             optimizer.step()
             optimizer.zero_grad()
 
-        # print train loss per epoch
-        print("Train loss: {}".format(tr_loss/nb_tr_steps))
+        print("Train loss: {}".format(training_loss/training_steps))
     
-def evaluate(model, test_loader, device)
+    
+def evaluate(model, test_loader, device):
     """
     Method for RoBERTa evaluation, requires ready to go DataLoader with test set.
+    The parameters passed are as follows:
+    model        - The PyTorch model that we wish to train.
+    test_loader  - The PyTorch DataLoader that should be used during evaluation.
+    device       - Where the model and data should be loaded (gpu or cpu).
     """
+    print('--------------------')
+    print('--------------------')
+    print('Evaluation.')
     model.eval()
-
-    eval_loss, eval_accuracy = 0, 0
-    nb_eval_steps, nb_eval_examples = 0, 0
+    
     y_true = []
     y_pred = []
     
     tag2name = _get_tag2name()
     
-    print("***** Running evaluation *****")
-    print("  Batch size = {}".format(32))
     for step, batch in enumerate(test_loader):
         batch = tuple(t.to(device) for t in batch)
         input_ids, input_mask, label_ids = batch
 
         with torch.no_grad():
-            outputs = model(input_ids, token_type_ids=None,
+            outputs = model(input_ids,
+                            token_type_ids=None,
                             attention_mask=input_mask,)
             logits = outputs[0] 
 
-        # Get NER predict result
+        # extract predictions
         logits = torch.argmax(F.log_softmax(logits,dim=2),dim=2)
         logits = logits.detach().cpu().numpy()
 
-
-        # Get NER true result
         label_ids = label_ids.to('cpu').numpy()
-
-        # Only predict the real word, mark=0, will not calculate
         input_mask = input_mask.to('cpu').numpy()
 
-        # Compare the valuable predict result
+        # omit additional tokens
         for i,mask in enumerate(input_mask):
-            # Real one
-            temp_1 = []
-            # Predict one
-            temp_2 = []
-
+            temp_y_true = []
+            temp_y_pred = []
             for j, m in enumerate(mask):
-                # Mark=0, meaning its a pad word, dont compare
                 if m:
-                    if tag2name[label_ids[i][j]] != "X" and tag2name[label_ids[i][j]] != "[CLS]" and tag2name[label_ids[i][j]] != "[SEP]" : # Exclude the X label
-                        temp_1.append(tag2name[label_ids[i][j]])
-                        temp_2.append(tag2name[logits[i][j]])
+                    if (tag2name[label_ids[i][j]] != "X" and
+                        tag2name[label_ids[i][j]] != "[CLS]" and
+                        tag2name[label_ids[i][j]] != "[SEP]"):
+                        temp_y_true.append(tag2name[label_ids[i][j]])
+                        temp_y_pred.append(tag2name[logits[i][j]])
                 else:
                     break
 
-            y_true.append(temp_1)
-            y_pred.append(temp_2)
+            y_true.append(temp_y_true)
+            y_pred.append(temp_y_pred)
 
-    print("f1 score: %f"%(f1_score(y_true, y_pred)))
-
+    print("Test Set F1 Score: %f"%(f1_score(y_true, y_pred)))
+    print('--------------------')
     
     
 if __name__ == '__main__':
@@ -144,20 +148,21 @@ if __name__ == '__main__':
     install('tqdm')
     install('seqeval')
     
+    import subprocess
+    import sys
     from transformers import RobertaConfig, RobertaForTokenClassification, AdamW
     from tqdm import tqdm,trange
     from seqeval.metrics import f1_score
     
     parser = argparse.ArgumentParser()
 
-    # SageMaker Parameters
     parser.add_argument('--batch-size', type=int, default=32, metavar='N',
                         help='input batch size for training (default: 32)')
     parser.add_argument('--epochs', type=int, default=3, metavar='N',
                         help='number of epochs to train (default: 3)')
     parser.add_argument('--seed', type=int, default=1, metavar='S',
                         help='random seed (default: 1)')
-    parser.add_argument('--max-len', type=int, default=45)   
+    parser.add_argument('--max_len', type=int, default=45)   
     parser.add_argument('--n_tags', type=int, default=20)
     
     parser.add_argument('--hosts', type=list, default=json.loads(os.environ['SM_HOSTS']))
@@ -173,7 +178,7 @@ if __name__ == '__main__':
 
     torch.manual_seed(args.seed)
 
-    # Load the training data.
+    # ------ LOAD DATA ------
     train_loader = _get_data_loader(args.batch_size, args.data_dir, "train_roberta.csv", args.max_len)
     test_loader = _get_data_loader(args.batch_size, args.val_dir, "test_roberta.csv", args.max_len)
     
@@ -181,7 +186,7 @@ if __name__ == '__main__':
     model = RobertaForTokenClassification.from_pretrained('roberta-base',
                                                           num_labels=args.n_tags).to(device)
 
-    # ------ TRAIN ROBERTA ------
+    # ------ SPECIFY OPTIMIZER ------
     no_decay = ["bias", "LayerNorm.weight"]
     optimizer_grouped_parameters = [
         {"params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
@@ -189,8 +194,9 @@ if __name__ == '__main__':
         {"params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)],
          "weight_decay": 0.0}
     ]
-    optimizer = AdamW(optimizer_grouped_parameters, lr=5e-5, eps==1e-8)
+    optimizer = AdamW(optimizer_grouped_parameters, lr=5e-5, eps=1e-8)
 
+    # ------ TRAIN ROBERTA ------
     train(model, train_loader, args.epochs, optimizer, device)
     
     # ------ EVALUATE ROBERTA ------
