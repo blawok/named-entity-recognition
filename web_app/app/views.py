@@ -53,7 +53,7 @@ def submit():
 def predictions():
 
     sentence_for_ner = session['sentence_for_ner']
-    resp = requests.post('https://7kyh9lbmqa.execute-api.eu-west-1.amazonaws.com/prod', data=sentence_for_ner)
+    resp = requests.post('https://9r58nr9e00.execute-api.eu-west-1.amazonaws.com/prod', data=sentence_for_ner)
     preds = json.loads(resp.content)
 
     pred_array = np.fromstring(str(preds)[1:-1], dtype=np.int, sep=', ')
