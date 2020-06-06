@@ -15,16 +15,21 @@
         <div class="col-lg-4"></div>
         <div class="col-lg-4">
 
-        <h2> Predictions </h2>
+        <div class="alert alert-success" role="alert">
+            <h2>Predictions</h2>
+            </div>
 
-        <h3>Input sentence: {{sentence_for_ner}}</h3>
+
+        <h4>Input sentence: {{sentence_for_ner}}</h4>
 
         <div class='table-responsive'>
                 {{ df_preds | safe }}
             </div>
 
         <br>
+        <div class="alert alert-info" role="alert">
         <a href="/"><i class="fa fa-fw fa-bolt"></i>Input another sentence</a>
+    </div>
     </div>
 </div>
 </body>
