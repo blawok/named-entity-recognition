@@ -1,6 +1,10 @@
 # Named Entity Recognition
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com) 
+
+![GitHub last commit](https://img.shields.io/github/last-commit/blawok/named-entity-recognition)
+![GitHub repo size](https://img.shields.io/github/repo-size/blawok/named-entity-recognition)
 [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com) 
+
 
 Training and deployment of BiLSTM and RoBERTa in AWS SageMaker for NER task.  
 I strongly encourage you to take advantage of [Jupyter Notebook Viewer](https://nbviewer.jupyter.org/github/blawok/named-entity-recognition/tree/master/) to explore this repository.
@@ -71,10 +75,10 @@ Brief look into the app:
 
 ![Recordit GIF](http://g.recordit.co/jiRqtNxMYD.gif)
 
-## Further work
+## Further research
 - [ ] Experiment with CRF layers (combined with BiLSTM and some embeddings like ELMo)
 - [ ] Experiment with CNN character embeddings
-- [ ] Experiment with different XAI techniques to explain NER predictions (like LIME)
+- [ ] Experiment with different XAI techniques to explain NER predictions (like LIME, eli5)
 
 ## References
 - https://arxiv.org/abs/1907.11692  
@@ -89,7 +93,7 @@ Brief look into the app:
 
 ## Contributions
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.  
-If you would like to collaborate on points from **further work**, feel free to open an issue or msg me on [linkedin](https://www.linkedin.com/in/bkowalczuk/) :wink:
+If you would like to collaborate on points from **further research**, feel free to open an issue or msg me on [linkedin](https://www.linkedin.com/in/bkowalczuk/) :wink:
 
 
 
