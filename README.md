@@ -12,6 +12,9 @@ I strongly encourage you to take advantage of [Jupyter Notebook Viewer](https://
 ## tl;dr
 Fine-tuned RoBERTa (F1 0.838) turned out to outperform BiLSTM (F1 0.788). In this repository you can explore the capabilities of AWS SageMaker (training and deployment scripts for Tensorflow and PyTorch), S3, Lambdas, API Gateway (model deployment) and Flask Framework (Web App).
 
+## Project report
+If you would like to go through the whole project you can start with the [project report](https://github.com/blawok/named-entity-recognition/blob/master/reports/project_report.pdf) and then follow the codes as it is described in the section below.
+
 ## Project flow
 
 ![mermaid_flowchart](https://user-images.githubusercontent.com/41793223/83953788-abfd4980-a843-11ea-95a2-613508068499.JPG)
